@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Girls Calculator 3.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Nunito',sans-serif;
+    min-height:100vh;
+    background:linear-gradient(135deg,#f9d0e8 0%,#e8d0f9 50%,#d0e8f9 100%);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+
+  .calculator {
+    background:rgba(255,255,255,0.85);
+    backdrop-filter:blur(20px);
+    border-radius:28px;
+    padding:16px 16px 20px;
+    width:100%; max-width:380px;
+    box-shadow:0 12px 48px rgba(180,80,160,0.18), inset 0 2px 8px rgba(255,255,255,0.8);
+    border:1.5px solid rgba(255,255,255,0.75);
+  }
+
+  h1 { text-align:center; color:#e0529a; font-size:1.35rem; font-weight:800; margin-bottom:12px; }
+
+  .view { display:none; }
+  .view.active { display:block; }
+
+  /* ── DISPLAY ── */
+  .display {
+    background:linear-gradient(135deg,rgba(255,220,240,0.9),rgba(230,200,255,0.9));
+    border-radius:18px; padding:12px 16px 14px; text-align:right; margin-bottom:12px;
+    border:1px solid rgba(255,255,255,0.8); box-shadow:inset 0 2px 8px rgba(200,100,180,0.12);
+    min-height:78px; display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .display .expr   { color:#c47a9a; font-size:0.88rem; min-height:18px; word-break:break-all; }
+  .display .result { color:#a0226a; font-size:2.1rem; font-weight:800; word-break:break-all; }
+
+  /* ── GRID: 6 columnas fila especial, 4 columnas el resto ── */
+  .buttons {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:7px;
+  }
+
+  /* Fila especial de 6 botones ocupa toda la fila */
+  .special-row {
+    grid-column: 1 / -1;
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:7px;
+  }
+
+  /* Base button */
+  .btn {
+    border:none; border-radius:13px; font-family:'Nunito',sans-serif;
+    font-size:1.15rem; font-weight:700; cursor:pointer; padding:14px 0;
+    transition:transform 0.13s, filter 0.13s; user-select:none;
+  }
+  .btn:active { transform:scale(0.91); filter:brightness(0.93); }
+
+  /* Botones especiales (fila de 6): más pequeños */
+  .btn-sm {
+    border:none; border-radius:12px; font-family:'Nunito',sans-serif;
+    font-size:0.95rem; font-weight:700; cursor:pointer; padding:11px 0;
+    transition:transform 0.13s, filter 0.13s; user-select:none;
+  }
+  .btn-sm:active { transform:scale(0.91); filter:brightness(0.93); }
+
+  /* Colores botones especiales */
+  .btn-c    { background:linear-gradient(135deg,#ff7070,#e83232); color:white; box-shadow:0 3px 10px rgba(240,60,60,.35); }
+  .btn-fx   { background:linear-gradient(135deg,#d8ccff,#bba8f5); color:#4a2490; border:1.5px solid rgba(255,255,255,.6); box-shadow:0 3px 10px rgba(140,80,220,.2); }
+  .btn-moon { background:linear-gradient(135deg,#1a1a2e,#0d0d1a); color:#f8c91e; }
+  .btn-back { background:linear-gradient(135deg,#ffe8cc,#ffd0a0); color:#b05010; border:2px solid rgba(255,160,40,.4); }
+  .btn-conv { background:linear-gradient(135deg,#d0f0ff,#a8dff8); color:#1060a0; border:1.5px solid rgba(255,255,255,.65); box-shadow:0 3px 10px rgba(40,120,220,.2); }
+  .btn-hist { background:linear-gradient(135deg,#fff0c8,#ffd880); color:#806010; border:1.5px solid rgba(255,255,255,.65); box-shadow:0 3px 10px rgba(200,160,30,.2); }
+
+  /* Colores botones normales */
+  .btn-op   { background:linear-gradient(135deg,#e2d4ff,#c8b0f8); color:#5828a8; border:1.5px solid rgba(255,255,255,.65); box-shadow:0 3px 10px rgba(140,80,220,.2); }
+  .btn-heart-special { background:linear-gradient(135deg,#ff5eaa,#e0208a); color:white; font-size:1.3rem; border-radius:13px; box-shadow:0 3px 12px rgba(240,40,140,.4); padding:0; display:flex; align-items:center; justify-content:center; }
+  .btn-eq   { grid-column:span 4; background:linear-gradient(135deg,#5bd46a,#3aaa48); color:white; border-radius:16px; font-size:1.5rem; font-weight:800; padding:14px 0; box-shadow:0 4px 16px rgba(60,180,80,.35); letter-spacing:2px; }
+
+  /* Corazones */
+  .btn-num {
+    padding:0; background:transparent; border:none; cursor:pointer;
+    position:relative; display:flex; align-items:center; justify-content:center;
+    aspect-ratio:1/0.92; font-family:'Nunito',sans-serif; font-size:1.2rem; font-weight:800;
+    color:#8a1860; text-shadow:0 1px 3px rgba(255,255,255,0.9);
+    transition:transform 0.13s, filter 0.13s; user-select:none;
+  }
+  .btn-num .heart-svg {
+    position:absolute; inset:0; width:100%; height:100%; z-index:0;
+    filter:drop-shadow(0 3px 10px rgba(220,100,180,0.38)); transition:filter 0.15s;
+  }
+  .btn-num:hover .heart-svg { filter:drop-shadow(0 5px 16px rgba(220,100,180,0.58)); }
+  .btn-num .num-label { position:relative; z-index:2; pointer-events:none; line-height:1; margin-top:3px; }
+  .btn-num:active { transform:scale(0.88); filter:brightness(0.94); }
+
+  /* ── BACK BAR ── */
+  .back-bar {
+    display:flex; align-items:center; gap:8px; margin-bottom:12px;
+  }
+  .back-btn {
+    border:none; border-radius:10px; padding:7px 12px;
+    background:rgba(240,210,235,0.8); color:#c060a0;
+    font-family:'Nunito',sans-serif; font-weight:700; font-size:0.85rem;
+    cursor:pointer; border:1.5px solid rgba(255,255,255,0.7);
+    transition:filter 0.15s;
+  }
+  .back-btn:hover { filter:brightness(0.95); }
+  .view-title { color:#e0529a; font-size:1rem; font-weight:800; }
+  .btn-clear { border:none; cursor:pointer; background:rgba(255,100,100,0.12); color:#d03070; border-radius:9px; padding:5px 12px; font-family:'Nunito',sans-serif; font-size:0.78rem; font-weight:700; border:1px solid rgba(220,80,120,0.2); margin-left:auto; }
+
+  /* ── HISTORIAL ── */
+  .history-scroll { overflow-y:auto; max-height:370px; display:flex; flex-direction:column; scrollbar-width:thin; scrollbar-color:rgba(220,100,180,0.3) transparent; }
+  .history-scroll::-webkit-scrollbar { width:4px; }
+  .history-scroll::-webkit-scrollbar-thumb { background:rgba(220,100,180,0.35); border-radius:4px; }
+  .history-item { display:flex; justify-content:space-between; align-items:center; padding:11px 14px; border-radius:14px; margin-bottom:7px; background:linear-gradient(135deg,rgba(255,220,240,0.7),rgba(230,200,255,0.6)); border:1px solid rgba(255,255,255,0.75); animation:fadeIn 0.25s ease; cursor:pointer; transition:filter 0.15s, transform 0.12s; }
+  .history-item:hover { filter:brightness(0.96); transform:scale(0.99); }
+  .history-op  { color:#c47a9a; font-size:0.82rem; font-weight:600; }
+  .history-res { color:#8a1860; font-size:1.2rem; font-weight:800; }
+  .history-tap { color:#d080b0; font-size:0.68rem; margin-top:1px; opacity:0.7; }
+  .history-eq  { color:#c060a0; font-size:1.3rem; font-weight:800; opacity:0.5; }
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(180,100,160,0.55); text-align:center; gap:10px; padding:60px 0; }
+  .empty-icon { font-size:2.8rem; }
+  .empty-text { font-size:0.9rem; font-weight:600; }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── CONVERSOR ── */
+  .conv-inner { display:flex; flex-direction:column; gap:10px; }
+  .converter-card { background:linear-gradient(135deg,rgba(255,220,240,0.9),rgba(230,200,255,0.85)); border-radius:18px; padding:14px; border:1px solid rgba(255,255,255,0.8); box-shadow:inset 0 2px 8px rgba(200,100,180,0.1); }
+  .conv-label { color:#c047a0; font-size:0.75rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:7px; }
+  .conv-select { width:100%; border:none; border-radius:10px; padding:9px 12px; font-family:'Nunito',sans-serif; font-size:0.92rem; font-weight:700; color:#8a1860; background:rgba(255,255,255,0.85); cursor:pointer; outline:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c047a0' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
+  .conv-input { width:100%; border:none; border-radius:10px; padding:10px 14px; margin-top:7px; font-family:'Nunito',sans-serif; font-size:1.4rem; font-weight:800; color:#8a1860; background:rgba(255,255,255,0.85); outline:none; text-align:right; }
+  .swap-btn { display:flex; align-items:center; justify-content:center; gap:8px; border:none; border-radius:13px; padding:11px; background:linear-gradient(135deg,#ff5eaa,#e0208a); color:white; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; box-shadow:0 3px 12px rgba(240,40,140,.35); transition:transform 0.13s, filter 0.13s; width:100%; }
+  .swap-btn:active { transform:scale(0.96); }
+  .conv-result-card { background:linear-gradient(135deg,rgba(255,180,220,0.5),rgba(200,160,255,0.4)); border-radius:18px; padding:16px; border:1px solid rgba(255,255,255,0.85); text-align:center; }
+  .conv-result-label  { color:#c047a0; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+  .conv-result-amount { color:#8a1060; font-size:1.75rem; font-weight:800; }
+  .conv-result-rate   { color:#c47a9a; font-size:0.78rem; margin-top:3px; font-weight:600; }
+  .conv-status        { color:#d080b0; font-size:0.72rem; margin-top:5px; font-style:italic; }
+
+  /* ── MODAL f(x) ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(60,0,40,.45); backdrop-filter:blur(6px); align-items:center; justify-content:center; z-index:100; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:rgba(255,240,250,.96); backdrop-filter:blur(20px); border-radius:24px; padding:22px; width:300px; box-shadow:0 12px 48px rgba(180,60,140,.25); border:1.5px solid rgba(255,255,255,.8); }
+  body.dark .modal { background:rgba(40,10,40,.95); border-color:rgba(200,100,180,.3); color:#ffaadd; }
+  .modal h2 { color:#e0529a; text-align:center; margin-bottom:14px; font-size:1.2rem; }
+  .modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .modal-btn { border:none; border-radius:12px; padding:11px 0; font-family:'Nunito',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#d8ccff,#bba8f5); color:#4a2490; transition:transform 0.12s, filter 0.12s; }
+  .modal-btn:active { transform:scale(0.93); filter:brightness(0.93); }
+  .modal-close { display:block; width:100%; margin-top:12px; background:linear-gradient(135deg,#ff7070,#e83232); color:white; border:none; border-radius:13px; padding:12px; font-family:'Nunito',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; }
+
+  /* ── DARK MODE ── */
+  body.dark { background:linear-gradient(135deg,#1a0828,#0d0820,#160820); }
+  body.dark .calculator { background:rgba(30,10,40,.9); border-color:rgba(200,100,200,.25); }
+  body.dark h1 { color:#ff80cc; }
+  body.dark .display { background:linear-gradient(135deg,rgba(80,20,60,.85),rgba(50,20,80,.85)); }
+  body.dark .display .result { color:#ffaadd; }
+  body.dark .display .expr   { color:#cc88bb; }
+  body.dark .btn-num  { color:#ffccee; }
+  body.dark .btn-op   { background:linear-gradient(135deg,#3a2a5a,#2a1a4a); color:#d0b0ff; }
+  body.dark .btn-conv { background:linear-gradient(135deg,#1a3050,#0d2040); color:#80c8ff; }
+  body.dark .btn-hist { background:linear-gradient(135deg,#3a3010,#2a2008); color:#ffd060; }
+  body.dark .btn-fx   { background:linear-gradient(135deg,#3a2860,#2a1850); color:#c8aaff; }
+  body.dark .back-btn { background:rgba(60,20,60,0.7); color:#cc88bb; }
+  body.dark .view-title { color:#ff80cc; }
+  body.dark .history-item { background:linear-gradient(135deg,rgba(80,20,60,.7),rgba(50,20,80,.6)); }
+  body.dark .history-op  { color:#cc88bb; }
+  body.dark .history-res { color:#ffaadd; }
+  body.dark .converter-card { background:linear-gradient(135deg,rgba(80,20,60,.8),rgba(50,20,80,.7)); }
+  body.dark .conv-select { background:rgba(50,15,50,.85); color:#ffaadd; }
+  body.dark .conv-input  { background:rgba(50,15,50,.85); color:#ffaadd; }
+  body.dark .conv-result-card { background:linear-gradient(135deg,rgba(100,30,70,.5),rgba(60,30,100,.4)); }
+  body.dark .conv-result-amount { color:#ffaadd; }
+  body.dark .modal-btn { background:linear-gradient(135deg,#3a2860,#2a1850); color:#c8aaff; }
+</style>
+</head>
+<body>
+
+<!-- SVG gradients globales -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden">
+  <defs>
+    <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,195,230,0.72)"/>
+      <stop offset="100%" stop-color="rgba(225,165,255,0.62)"/>
+    </linearGradient>
+    <linearGradient id="hs" x1="0%" y1="0%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.62)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="calculator">
+  <h1>🍉 Girls Calculator 3.0</h1>
+
+  <!-- ══ VISTA CALCULADORA ══ -->
+  <div class="view active" id="view-calc">
+    <div class="display">
+      <div class="expr"   id="expr"></div>
+      <div class="result" id="result">0</div>
+    </div>
+
+    <div class="buttons">
+
+      <!-- Fila especial: 6 botones pequeños -->
+      <div class="special-row">
+        <button class="btn-sm btn-c"    onclick="clearAll()">C</button>
+        <button class="btn-sm btn-fx"   onclick="openFx()">f(x)</button>
+        <button class="btn-sm btn-moon" onclick="toggleDark()">🌙</button>
+        <button class="btn-sm btn-back" onclick="backspace()">⌫</button>
+        <button class="btn-sm btn-conv" onclick="switchView('conv')" title="Conversor de monedas">💱</button>
+        <button class="btn-sm btn-hist" onclick="switchView('hist')" title="Historial">🕐</button>
+      </div>
+
+      <!-- Filas numéricas (4 columnas) -->
+      <button class="btn-num" onclick="inp('7')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">7</span></button>
+      <button class="btn-num" onclick="inp('8')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">8</span></button>
+      <button class="btn-num" onclick="inp('9')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">9</span></button>
+      <button class="btn btn-op" onclick="inp('÷')">÷</button>
+
+      <button class="btn-num" onclick="inp('4')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">4</span></button>
+      <button class="btn-num" onclick="inp('5')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">5</span></button>
+      <button class="btn-num" onclick="inp('6')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">6</span></button>
+      <button class="btn btn-op" onclick="inp('×')">×</button>
+
+      <button class="btn-num" onclick="inp('1')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">1</span></button>
+      <button class="btn-num" onclick="inp('2')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">2</span></button>
+      <button class="btn-num" onclick="inp('3')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">3</span></button>
+      <button class="btn btn-op" onclick="inp('-')">−</button>
+
+      <button class="btn-num" onclick="inp('0')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">0</span></button>
+      <button class="btn-num" onclick="inp('.')"><svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg"><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hg)" stroke="rgba(255,255,255,0.8)" stroke-width="2"/><path d="M50,87C50,87 4,56 4,27C4,13 15,4 27,4C37,4 45,10 50,18C55,10 63,4 73,4C85,4 96,13 96,27C96,56 50,87 50,87Z" fill="url(#hs)"/></svg><span class="num-label">.</span></button>
+      <button class="btn btn-heart-special" onclick="calculate()">🩷</button>
+      <button class="btn btn-op" onclick="inp('+')">+</button>
+
+      <button class="btn btn-eq" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <!-- ══ VISTA CONVERSOR ══ -->
+  <div class="view" id="view-conv">
+    <div class="back-bar">
+      <button class="back-btn" onclick="switchView('calc')">← Volver</button>
+      <span class="view-title">💱 Conversor</span>
+    </div>
+    <div class="conv-inner">
+      <div class="converter-card">
+        <div class="conv-label">De</div>
+        <select class="conv-select" id="fromCurrency" onchange="convert()">
+          <option value="USD">🇺🇸 USD — Dólar</option>
+          <option value="EUR">🇪🇺 EUR — Euro</option>
+          <option value="MXN" selected>🇲🇽 MXN — Peso Mexicano</option>
+          <option value="COP">🇨🇴 COP — Peso Colombiano</option>
+          <option value="ARS">🇦🇷 ARS — Peso Argentino</option>
+          <option value="CLP">🇨🇱 CLP — Peso Chileno</option>
+          <option value="PEN">🇵🇪 PEN — Sol Peruano</option>
+          <option value="BRL">🇧🇷 BRL — Real Brasileño</option>
+          <option value="GBP">🇬🇧 GBP — Libra Esterlina</option>
+          <option value="JPY">🇯🇵 JPY — Yen Japonés</option>
+          <option value="CAD">🇨🇦 CAD — Dólar Canadiense</option>
+          <option value="CHF">🇨🇭 CHF — Franco Suizo</option>
+          <option value="CNY">🇨🇳 CNY — Yuan Chino</option>
+          <option value="KRW">🇰🇷 KRW — Won Coreano</option>
+          <option value="INR">🇮🇳 INR — Rupia India</option>
+        </select>
+        <input class="conv-input" id="fromAmount" type="number" value="1" oninput="convert()" placeholder="0"/>
+      </div>
+      <button class="swap-btn" onclick="swapCurrencies()">🔄 Intercambiar monedas</button>
+      <div class="converter-card">
+        <div class="conv-label">A</div>
+        <select class="conv-select" id="toCurrency" onchange="convert()">
+          <option value="USD" selected>🇺🇸 USD — Dólar</option>
+          <option value="EUR">🇪🇺 EUR — Euro</option>
+          <option value="MXN">🇲🇽 MXN — Peso Mexicano</option>
+          <option value="COP">🇨🇴 COP — Peso Colombiano</option>
+          <option value="ARS">🇦🇷 ARS — Peso Argentino</option>
+          <option value="CLP">🇨🇱 CLP — Peso Chileno</option>
+          <option value="PEN">🇵🇪 PEN — Sol Peruano</option>
+          <option value="BRL">🇧🇷 BRL — Real Brasileño</option>
+          <option value="GBP">🇬🇧 GBP — Libra Esterlina</option>
+          <option value="JPY">🇯🇵 JPY — Yen Japonés</option>
+          <option value="CAD">🇨🇦 CAD — Dólar Canadiense</option>
+          <option value="CHF">🇨🇭 CHF — Franco Suizo</option>
+          <option value="CNY">🇨🇳 CNY — Yuan Chino</option>
+          <option value="KRW">🇰🇷 KRW — Won Coreano</option>
+          <option value="INR">🇮🇳 INR — Rupia India</option>
+        </select>
+      </div>
+      <div class="conv-result-card">
+        <div class="conv-result-label">Resultado</div>
+        <div class="conv-result-amount" id="convResult">—</div>
+        <div class="conv-result-rate"   id="convRate"></div>
+        <div class="conv-status"        id="convStatus">Cargando tasas... 🩷</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ VISTA HISTORIAL ══ -->
+  <div class="view" id="view-hist">
+    <div class="back-bar">
+      <button class="back-btn" onclick="switchView('calc')">← Volver</button>
+      <span class="view-title">🕐 Historial</span>
+      <button class="btn-clear" onclick="clearHistory()">🗑️ Limpiar</button>
+    </div>
+    <div class="history-scroll" id="historyScroll">
+      <div class="empty-state">
+        <div class="empty-icon">🩷</div>
+        <div class="empty-text">Aún no hay operaciones.<br>¡Empieza a calcular!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal f(x) -->
+<div class="modal-overlay" id="fxModal">
+  <div class="modal">
+    <h2>🍉 Funciones f(x)</h2>
+    <div class="modal-grid">
+      <button class="modal-btn" onclick="fxOp('√')">√ Raíz</button>
+      <button class="modal-btn" onclick="fxOp('x²')">x² Cuadrado</button>
+      <button class="modal-btn" onclick="fxOp('1/x')">1/x Inverso</button>
+      <button class="modal-btn" onclick="fxOp('|x|')">|x| Absoluto</button>
+      <button class="modal-btn" onclick="fxOp('log')">log₁₀</button>
+      <button class="modal-btn" onclick="fxOp('ln')">ln</button>
+      <button class="modal-btn" onclick="fxOp('sin')">sin°</button>
+      <button class="modal-btn" onclick="fxOp('cos')">cos°</button>
+    </div>
+    <button class="modal-close" onclick="closeFx()">Cerrar ✕</button>
+  </div>
+</div>
+
+<script>
+let expression='', justCalc=false;
+const resultEl=document.getElementById('result'), exprEl=document.getElementById('expr');
+const historyScroll=document.getElementById('historyScroll');
+
+function fmtNum(n){const num=typeof n==='string'?parseFloat(n):n;if(isNaN(num))return String(n);return num.toLocaleString('en-US',{maximumFractionDigits:10});}
+function fmtExpr(e){return e.replace(/(\d+\.?\d*)/g,m=>{const n=parseFloat(m);return isNaN(n)?m:fmtNum(n);});}
+function updateDisplay(){exprEl.textContent=fmtExpr(expression);const n=parseFloat(expression);resultEl.textContent=(!isNaN(n)&&expression!=='')?fmtNum(n):(expression||'0');}
+
+function switchView(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+}
+
+function inp(c){if(justCalc&&(!isNaN(c)||c==='.'))expression='';justCalc=false;expression+=c;updateDisplay();}
+function clearAll(){expression='';exprEl.textContent='';resultEl.textContent='0';}
+function backspace(){expression=expression.slice(0,-1);updateDisplay();if(!expression)resultEl.textContent='0';}
+
+function addHistory(expr,result){
+  const em=historyScroll.querySelector('.empty-state');if(em)em.remove();
+  const item=document.createElement('div');item.className='history-item';
+  item.innerHTML=`<div><div class="history-op">${fmtExpr(expr)}</div><div class="history-res">${fmtNum(result)}</div><div class="history-tap">Toca para reusar 🩷</div></div><div class="history-eq">=</div>`;
+  item.addEventListener('click',()=>{expression=String(result);resultEl.textContent=fmtNum(result);exprEl.textContent='';justCalc=true;switchView('calc');});
+  historyScroll.insertBefore(item,historyScroll.firstChild);
+}
+function clearHistory(){historyScroll.innerHTML='<div class="empty-state"><div class="empty-icon">🩷</div><div class="empty-text">Aún no hay operaciones.<br>¡Empieza a calcular!</div></div>';}
+
+function calculate(){
+  if(!expression)return;
+  try{
+    const safe=expression.replace(/÷/g,'/').replace(/×/g,'*').replace(/−/g,'-');
+    let res=Function('"use strict";return('+safe+')')();
+    res=parseFloat(res.toFixed(10));
+    addHistory(expression,res);
+    expression=String(res);exprEl.textContent='';resultEl.textContent=fmtNum(res);justCalc=true;
+  }catch{resultEl.textContent='Error 💔';expression='';}
+}
+
+function toggleDark(){document.body.classList.toggle('dark');}
+function openFx(){document.getElementById('fxModal').classList.add('show');}
+function closeFx(){document.getElementById('fxModal').classList.remove('show');}
+function fxOp(fn){
+  closeFx();const num=parseFloat(expression);if(isNaN(num))return;
+  const ops={'√':Math.sqrt(num),'x²':num*num,'1/x':1/num,'|x|':Math.abs(num),'log':Math.log10(num),'ln':Math.log(num),'sin':Math.sin(num*Math.PI/180),'cos':Math.cos(num*Math.PI/180)};
+  const res=parseFloat(ops[fn].toFixed(10));
+  addHistory(fn+'('+num+')',res);expression=String(res);exprEl.textContent='';resultEl.textContent=fmtNum(res);justCalc=true;
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key>='0'&&e.key<='9')inp(e.key);
+  else if(e.key==='+')inp('+');else if(e.key==='-')inp('-');else if(e.key==='*')inp('×');
+  else if(e.key==='/'){e.preventDefault();inp('÷');}else if(e.key==='.')inp('.');
+  else if(e.key==='Enter'||e.key==='=')calculate();
+  else if(e.key==='Backspace')backspace();else if(e.key==='Escape')clearAll();
+});
+
+// ── CONVERSOR ──
+// Tasas reales al 28 feb 2026 (fuentes: Yahoo Finance, exchange-rates.org, tradingeconomics.com)
+const FALLBACK={USD:1,EUR:0.849,MXN:17.23,COP:3758.40,ARS:1456,CLP:873,PEN:3.71,BRL:5.14,GBP:0.740,JPY:156.1,CAD:1.372,CHF:0.788,CNY:7.005,KRW:1445,INR:89.87};
+let rates={...FALLBACK};
+
+async function fetchRates(){
+  try{
+    const res=await fetch('https://api.frankfurter.app/latest?from=USD');
+    if(!res.ok)throw new Error();
+    const data=await res.json();
+    rates={USD:1,...data.rates};
+    document.getElementById('convStatus').textContent='✅ Tasas en tiempo real';
+  }catch{document.getElementById('convStatus').textContent='⚠️ Usando tasas estimadas';}
+  convert();
+}
+function convert(){
+  const from=document.getElementById('fromCurrency').value;
+  const to=document.getElementById('toCurrency').value;
+  const amount=parseFloat(document.getElementById('fromAmount').value);
+  if(isNaN(amount)){document.getElementById('convResult').textContent='—';document.getElementById('convRate').textContent='';return;}
+  const result=(amount/rates[from])*rates[to];
+  const rate=rates[to]/rates[from];
+  document.getElementById('convResult').textContent=result.toLocaleString('en-US',{maximumFractionDigits:2})+' '+to;
+  document.getElementById('convRate').textContent=`1 ${from} = ${rate.toLocaleString('en-US',{maximumFractionDigits:4})} ${to}`;
+}
+function swapCurrencies(){
+  const fc=document.getElementById('fromCurrency'),tc=document.getElementById('toCurrency');
+  [fc.value,tc.value]=[tc.value,fc.value];convert();
+}
+fetchRates();
+</script>
+</body>
+</html>
